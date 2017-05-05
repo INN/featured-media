@@ -1,0 +1,19 @@
+{
+  "generator-plugin-wp": {
+    "name": "Largo Featured Media",
+    "homepage": "https://nerds.inn.org/",
+    "description": "The Featured Media bits of Largo 0.5.5.3",
+    "version": "0.1.0",
+    "author": "The INN Nerds",
+    "authoremail": "nerds@inn.org",
+    "authorurl": "https://nerds.inn.org/",
+    "license": "GPLv2",
+    "slug": "largo-featured-media",
+    "classname": "Largo_Featured_Media",
+    "mainclassname": "Largo_Featured_Media",
+    "classprefix": "LFM_",
+    "prefix": "largo_featured_media",
+    "year": 2017,
+    "currentVersionWP": "4.7.2"
+  }
+}
