@@ -268,6 +268,10 @@ function largo_enqueue_featured_media_js( $hook ) {
 	}
 	global $post, $wp_query;
 
+	// Get us a URL
+	$instance = largo_featured_media();
+	$url = $instance->url;
+
 	// Run this action on term edit pages
 	// edit-tags.php for wordpress before 4.5
 	// term.php for 4.5 and after
@@ -288,10 +292,9 @@ function largo_enqueue_featured_media_js( $hook ) {
 	// The scripts following depend upon the WordPress media APIs
 	wp_enqueue_media();
 
-	$suffix = ( LARGO_DEBUG ) ? '' : '.min';
 	wp_enqueue_script(
 		'largo_featured_media',
-		get_template_directory_uri() . '/js/featured-media' . $suffix . '.js',
+		$url . 'assets/js/featured-media.js',
 		array( 'media-models', 'media-views' ),
 		false,
 		1
@@ -313,7 +316,7 @@ function largo_enqueue_featured_media_js( $hook ) {
 	);
 	wp_enqueue_style(
 		'largo_featured_media',
-		get_template_directory_uri(). '/css/featured-media' . $suffix . '.css'
+		$url . 'assets/css/featured-media.css'
 	);
 
 	wp_localize_script( 'largo_featured_media', 'LFM', array(

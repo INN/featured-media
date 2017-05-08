@@ -116,11 +116,6 @@ final class Largo_Featured_Media {
 		$this->basename = plugin_basename( __FILE__ );
 		$this->url      = plugin_dir_url( __FILE__ );
 		$this->path     = plugin_dir_path( __FILE__ );
-
-		// Include additional php files here.
-		require 'includes/featured-media.php';
-		require 'includes/term-meta.php';
-		require 'includes/term-featured-media.php';
 	}
 
 	/**
@@ -144,6 +139,20 @@ final class Largo_Featured_Media {
 	 */
 	public function hooks() {
 		add_action( 'init', array( $this, 'init' ), 0 );
+		add_action( 'after_setup_theme', array( $this, 'require_files' ), 15 ); // largo's requires are on 10
+	}
+
+	/**
+	 * Require files after the themes are set up
+	 * This is done to avoid conflict with Largo's copies of these files
+	 *
+	 * @since 0.1.0
+	 */
+	public function require_files() {
+		// Include additional php files here.
+		require 'includes/featured-media.php';
+		require 'includes/term-meta.php';
+		require 'includes/term-featured-media.php';
 	}
 
 	/**
