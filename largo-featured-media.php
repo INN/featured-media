@@ -41,6 +41,7 @@
 // Include additional php files here.
 require 'includes/featured-media.php';
 require 'includes/term-meta.php';
+require 'includes/term-featured-media.php';
 
 /**
  * Main initiation class.
