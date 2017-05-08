@@ -38,11 +38,6 @@
  */
 
 
-// Include additional php files here.
-require 'includes/featured-media.php';
-require 'includes/term-meta.php';
-require 'includes/term-featured-media.php';
-
 /**
  * Main initiation class.
  *
@@ -121,6 +116,11 @@ final class Largo_Featured_Media {
 		$this->basename = plugin_basename( __FILE__ );
 		$this->url      = plugin_dir_url( __FILE__ );
 		$this->path     = plugin_dir_path( __FILE__ );
+
+		// Include additional php files here.
+		require 'includes/featured-media.php';
+		require 'includes/term-meta.php';
+		require 'includes/term-featured-media.php';
 	}
 
 	/**
