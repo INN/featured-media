@@ -39,7 +39,7 @@
 
 
 // Include additional php files here.
-// require 'includes/something.php';
+require 'includes/featured-media.php';
 
 /**
  * Main initiation class.
