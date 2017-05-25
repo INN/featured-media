@@ -493,8 +493,8 @@ function largo_save_featured_media_data( $post_id, $post ) {
 	$post_type = get_post_type_object( $post->post_type );
 
 	// Check if the current user has permission to edit the post
-	if ( !current_user_can( $post_type->cap->edit_post, $post_id ) ) {
-		return $post_id;
+	if ( ! current_user_can( 'edit_post', $post_id ) ) {
+		return;
 	}
 
 	// Get the posted data and sanitize it for use as an HTML class
@@ -510,7 +510,7 @@ function largo_save_featured_media_data( $post_id, $post ) {
 	 * If the checkbox was checked, update the meta_value, but save it as 'false' for compatibility with older Largo versions (<.5.5)
 	 * If the checkbox was unchecked, delete the meta_value
 	 */
-	 if ( $new_meta_value && 'true' == $new_meta_value && '' == $meta_value ) {
+	 if ( $new_meta_value && 'true' === $new_meta_value && '' === $meta_value ) {
 		 add_post_meta( $post_id, $meta_key, 'false', true );
 	} elseif ( empty( $new_meta_value ) ) {
 		delete_post_meta( $post_id, $meta_key );
