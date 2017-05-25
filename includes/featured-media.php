@@ -226,6 +226,7 @@ function largo_get_featured_media( $post = null ) {
 		);
 	} else if ( ! empty( $ret ) && in_array( $ret['type'], array( 'embed', 'video' ) ) && ! empty( $post_thumbnail ) ) {
 		$attachment = wp_prepare_attachment_for_js( $post_thumbnail );
+		unset( $attachment['compat'] );
 		$ret = array_merge( $ret, array( 'attachment_data' => $attachment ) );
 	}
 
