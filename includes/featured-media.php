@@ -343,32 +343,32 @@ function largo_featured_media_templates() { ?>
 
 			<# var model = data.controller.model #>
 			<div>
-				<label for="title"><span><?php echo __( 'Title', 'largo' ); ?></span></label>
+				<label for="title"><span><?php esc_html_e( 'Title', 'largo' ); ?></span></label>
 				<input type="text" name="title" <# if (model.get('type') == 'embed-code') { #>value="{{ model.get('title') }}"<# } #> />
 			</div>
 
 			<div>
-				<label for="caption"><span><?php echo __( 'Caption', 'largo' ); ?></span></label>
+				<label for="caption"><span><?php esc_html_e( 'Caption', 'largo' ); ?></span></label>
 				<input type="text" name="caption" <# if (model.get('type') == 'embed-code') { #>value="{{ model.get('caption') }}"<# } #> />
 			</div>
 
 			<div>
-				<label for="credit"><span><?php echo __( 'Credit', 'largo' ); ?></span></label>
+				<label for="credit"><span><?php esc_html_e( 'Credit', 'largo' ); ?></span></label>
 				<input type="text" name="credit" <# if (model.get('type') == 'embed-code') { #>value="{{ model.get('credit') }}"<# } #> />
 			</div>
 
 			<div>
-				<label for="url"><span><?php echo __( 'URL', 'largo' ); ?></span></label>
+				<label for="url"><span><?php esc_html_e( 'URL', 'largo' ); ?></span></label>
 				<input type="text" name="url" <# if (model.get('type') == 'embed-code') { #>value="{{ model.get('url') }}"<# } #> />
 			</div>
 
 			<div>
-				<label for="embed"><span><?php echo __( 'Embed code', 'largo' ); ?></span></label>
+				<label for="embed"><span><?php esc_html_e( 'Embed code', 'largo' ); ?></span></label>
 				<textarea name="embed"><# if (model.get('type') == 'embed-code') { #>{{ model.get('embed') }}<# } #></textarea>
 			</div>
 
 			<div>
-				<label><span><?php echo __( 'Embed thumbnail', 'largo' ); ?></span></span></label>
+				<label><span><?php esc_html_e( 'Embed thumbnail', 'largo' ); ?></span></span></label>
 				<div id="embed-thumb"></div>
 			</div>
 		</form>
@@ -378,36 +378,36 @@ function largo_featured_media_templates() { ?>
 		<form id="featured-video-form">
 			<input type="hidden" name="type" value="video" />
 
-			<p><?php echo __( 'Enter a video URL to get started', 'largo' ); ?>.</p>
+			<p><?php esc_html_e( 'Enter a video URL to get started', 'largo' ); ?>.</p>
 			<# var model = data.controller.model #>
 			<div>
-				<label for="url"><span><?php echo __( 'Video URL', 'largo' ); ?>  <span class="spinner" style="display: none;"></span></label>
+				<label for="url"><span><?php esc_html_e( 'Video URL', 'largo' ); ?>  <span class="spinner" style="display: none;"></span></label>
 				<input type="text" class="url" name="url" <# if (model.get('type') == 'video') { #>value="{{ model.get('url') }}"<# } #>/>
 				<p class="error"></p>
 			</div>
 
 			<div>
-			<label for="embed"><span><?php echo __( 'Video embed code', 'largo' ); ?></span></label>
+			<label for="embed"><span><?php esc_html_e( 'Video embed code', 'largo' ); ?></span></label>
 				<textarea name="embed"><# if (model.get('type') == 'video') { #>{{ model.get('embed') }}<# } #></textarea>
 			</div>
 
 			<div>
-				<label><span><?php echo __( 'Video thumbnail', 'largo' ); ?></span></span></label>
+				<label><span><?php esc_html_e( 'Video thumbnail', 'largo' ); ?></span></span></label>
 				<div id="embed-thumb"></div>
 			</div>
 
 			<div>
-				<label for="title"><span><?php echo __( 'Title', 'largo' ); ?></span></span></label>
+				<label for="title"><span><?php esc_html_e( 'Title', 'largo' ); ?></span></span></label>
 				<input type="text" name="title" <# if (model.get('type') == 'video') { #>value="{{ model.get('title') }}"<# } #> />
 			</div>
 
 			<div>
-				<label for="caption"><span><?php echo __( 'Caption', 'largo' ); ?></span></label>
+				<label for="caption"><span><?php esc_html_e( 'Caption', 'largo' ); ?></span></label>
 				<input type="text" name="caption" <# if (model.get('type') == 'video') { #>value="{{ model.get('caption') }}"<# } #> />
 			</div>
 
 			<div>
-				<label for="credit"><span><?php echo __( 'Credit', 'largo' ); ?></span></label>
+				<label for="credit"><span><?php esc_html_e( 'Credit', 'largo' ); ?></span></label>
 				<input type="text" name="credit" <# if (model.get('type') == 'video') { #>value="{{ model.get('credit') }}"<# } #> />
 			</div>
 
@@ -424,12 +424,12 @@ function largo_featured_media_templates() { ?>
 				<input type="hidden" name="thumbnail_url" value="{{ data.model.get('thumbnail_url') }}" />
 				<input type="hidden" name="thumbnail_type" value="oembed" />
 			<# } #>
-			<a href="#" class="remove-thumb"><?php echo __( 'Remove thumbnail', 'largo' ); ?></a>
+			<a href="#" class="remove-thumb"><?php esc_html_e( 'Remove thumbnail', 'largo' ); ?></a>
 		</div>
 	</script>
 
 	<script type="text/template" id="tmpl-featured-remove-featured">
-		<h1><?php echo __( 'Are you sure you want to remove featured media from this post?', 'largo' ); ?></h1>
+		<h1><?php esc_html_e( 'Are you sure you want to remove featured media from this post?', 'largo' ); ?></h1>
 	</script>
 <?php }
 add_action( 'admin_print_footer_scripts', 'largo_featured_media_templates', 1 );
