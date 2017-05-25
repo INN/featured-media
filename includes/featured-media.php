@@ -71,8 +71,7 @@ function largo_get_hero( $post = null, $classes = '' ) {
 	if ( isset( $values['featured-image-display'][0] ) && ! isset( $values['youtube_url'] ) ) {
 		return $ret;
 	}
-	if ( largo_has_featured_media( $post->ID ) && $hero_class !== 'is-empty' ) {
-
+	if ( largo_has_featured_media( $post->ID ) && 'is-empty' !== $hero_class ) {
 		$ret = largo_get_featured_hero( $post->ID, $classes );
 	}
 
