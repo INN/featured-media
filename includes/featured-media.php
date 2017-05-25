@@ -42,8 +42,9 @@ function largo_hero( $post = null, $classes = '' ) {
 	 * Not passed through wp_kses() because we do that later.
 	 * when the hero image/embed is actually output.
 	 * the output happens (and is escaped) in:
-	 *  partials/featured-embed.php
-	 *  partials/featured-image.php
+	 *  partials/hero-featured-embed.php
+	 *  partials/hero-featured-image.php
+	 *  etc.
 	 */
 	echo largo_get_hero( $post, $classes );
 }
