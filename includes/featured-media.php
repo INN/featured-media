@@ -527,20 +527,18 @@ add_action( 'save_post', 'largo_save_featured_media_data', 10, 2 );
  * with an `id` key corresponding to post ID to look up.
  */
 function largo_featured_media_read() {
-	if ( !empty( $_POST['data'] ) ) {
+	if ( ! empty( $_POST['data'] ) ) {
 		$data = json_decode( stripslashes( $_POST['data'] ), true );
 		$ret = largo_get_featured_media( $data['id'] );
 
 		// Otherwise, check for `featured_media` post meta
 		if ( !empty( $ret ) ) {
-			print json_encode( $ret );
-			wp_die();
+			wp_send_json( $ret );
 		}
 
 		// No featured thumbnail and not `featured_media`, so just return
 		// an array with the post ID
-		print json_encode( array( 'id' => $data['id'] ) );
-		wp_die();
+		wp_send_json( array( 'id' => $data['id'] ) );
 	}
 }
 add_action( 'wp_ajax_largo_featured_media_read', 'largo_featured_media_read' );
@@ -550,63 +548,83 @@ add_action( 'wp_ajax_largo_featured_media_read', 'largo_featured_media_read' );
  * an `id` key corresponding to the post ID that needs meta saved.
  */
 function largo_featured_media_save() {
-	if ( !empty( $_POST['data'] ) ) {
-		$data = json_decode( stripslashes( $_POST['data'] ), true );
 
-		// If an attachment ID is present, update the post thumbnail/featured image
-		if ( !empty( $data['attachment'] ) ) {
-			set_post_thumbnail( $data['id'], $data['attachment'] );
-		} else {
-			delete_post_thumbnail( $data['id'] );
-		}
-		// Get rid of the old youtube_url while we're saving
-		$youtube_url = get_post_meta( $data['id'], 'youtube_url', true );
-		if ( !empty( $youtube_url ) ) {
-			delete_post_meta($data['id'], 'youtube_url');
-		}
-		// Set the featured image for embed or oembed types
-		if ( isset( $data['thumbnail_url'] ) && isset( $data['thumbnail_type'] ) && $data['thumbnail_type'] == 'oembed' ) {
-			$thumbnail_id = largo_media_sideload_image( $data['thumbnail_url'], null );
-		} else if ( isset( $data['attachment'] ) ) {
-			$thumbnail_id = $data['attachment'];
-		}
+	check_ajax_referer( 'largo_featured_media_ajax_nonce', 'security' );
 
-		// If featured media is a gallery, use the first image as the representative thumbnail
-		if ( $data['type'] == 'gallery' ) {
-			$thumbnail_id = $data['gallery'][0];
-		}
-
-		if ( isset( $thumbnail_id ) ) {
-			update_post_meta( $data['id'], '_thumbnail_id', $thumbnail_id );
-			$data['attachment_data'] = wp_prepare_attachment_for_js( $thumbnail_id );
-		}
-
-		// Don't save the post ID in post meta
-		$save = $data;
-		unset( $save['id'] );
-
-		// Save what's sent over the wire as `featured_media` post meta
-		$ret = update_post_meta( $data['id'], 'featured_media', $save );
-
-		print json_encode( $data );
-		wp_die();
+	if ( empty( $_POST['data'] ) ) {
+		return;
 	}
+
+	$data = json_decode( wp_unslash( $_POST['data'] ), true );
+	if ( ! current_user_can( 'edit_post', $data['id'] ) ) {
+		return;
+	}
+
+	// If an attachment ID is present, update the post thumbnail/featured image
+	if ( !empty( $data['attachment'] ) ) {
+		set_post_thumbnail( $data['id'], $data['attachment'] );
+	} else {
+		delete_post_thumbnail( $data['id'] );
+	}
+
+	// Get rid of the old youtube_url while we're saving
+	$youtube_url = get_post_meta( $data['id'], 'youtube_url', true );
+	if ( ! empty( $youtube_url ) ) {
+		delete_post_meta( $data['id'], 'youtube_url' );
+	}
+	// Set the featured image for embed or oembed types
+	if ( isset( $data['thumbnail_url'] ) && isset( $data['thumbnail_type'] ) && $data['thumbnail_type'] == 'oembed' ) {
+		add_action( 'add_attachment', 'largo_media_sideload_filter' );
+		media_sideload_image( $data['thumbnail_url'], $data['id'], null );
+		remove_action( 'add_attachment', 'largo_media_sideload_filter' );
+	} else if ( isset( $data['attachment'] ) ) {
+		if ( $data['type'] == 'gallery' ) {
+			$thumbnail_id = isset( $data['gallery'][0] ) ? $data['gallery'][0] : false;
+		} else {
+			$thumbnail_id = isset( $data['attachment'] ) ? $data['attachment'] : false;
+		}
+		largo_save_featured_media( $thumbnail_id );
+	}
+
+	wp_send_json( $data );
 }
 add_action( 'wp_ajax_largo_featured_media_save', 'largo_featured_media_save' );
+
+function largo_media_sideload_filter( $thumbnail_id ) {
+	largo_save_featured_media( $thumbnail_id );
+}
+
+function largo_save_featured_media( $thumbnail_id ) {
+	$data = json_decode( stripslashes( $_POST['data'] ), true );
+
+	if ( $thumbnail_id ) {
+		update_post_meta( $data['id'], '_thumbnail_id', $thumbnail_id );
+		$data['attachment_data'] = wp_prepare_attachment_for_js( $thumbnail_id );
+		unset( $data['attachment_data']['compat'] );
+	}
+
+	// Don't save the post ID in post meta.
+	$save = $data;
+	unset( $save['id'] );
+
+	// Save what's sent over the wire as `featured_media` post meta.
+	update_post_meta( $data['id'], 'featured_media', $save );
+
+}
 
 /**
  * Saves the option that determines whether a featured image should be displayed
  * at the top of the post page or not.
  */
 function largo_save_featured_image_display() {
-	if ( !empty( $_POST['data'] ) ) {
+	if ( ! empty( $_POST['data'] ) ) {
 		$data = json_decode( stripslashes( $_POST['data'] ), true );
 
 		$post_ID = (int) $data['id'];
 		$post_type = get_post_type( $post_ID );
 		$post_status = get_post_status( $post_ID );
 
-		if ( $post_type && isset( $data['featured-image-display'] ) && $data['featured-image-display'] == 'on') {
+		if ( $post_type && isset( $data['featured-image-display'] ) && $data['featured-image-display'] === 'on') {
 			update_post_meta( $post_ID, 'featured-image-display', 'false' );
 		} else {
 			delete_post_meta( $post_ID, 'featured-image-display' );
@@ -628,12 +646,12 @@ function largo_fetch_video_oembed() {
 		require_once( ABSPATH . WPINC . '/class-oembed.php' );
 		$oembed = _wp_oembed_get_object();
 		$url = $data['url'];
-		$provider = $oembed->get_provider($url);
-		$data = $oembed->fetch($provider, $url);
-		$embed = $oembed->data2html($data, $url);
+		$provider = $oembed->get_provider( $url );
+		$data = $oembed->fetch( $provider, $url );
+		$embed = $oembed->data2html( $data, $url );
 		$ret = array_merge( array( 'embed' => $embed ), (array) $data );
 		print json_encode( $ret );
-		wp_die();
+		wp_send_json( $ret );
 	}
 }
 add_action( 'wp_ajax_largo_fetch_video_oembed', 'largo_fetch_video_oembed' );
@@ -647,7 +665,7 @@ function largo_featured_media_post_classes( $classes ) {
 	global $post;
 
 	$featured = largo_get_featured_media( $post->ID );
-	if ( !empty( $featured ) ) {
+	if ( ! empty( $featured ) ) {
 		$classes = array_merge( $classes, array(
 			'featured-media',
 			'featured-media-' . $featured['type']
@@ -681,7 +699,7 @@ if ( ! function_exists( 'largo_hero_class' ) ) {
 		}
 
 		if ( $echo ) {
-			echo $hero_class;
+			echo esc_attr( $hero_class );
 		} else {
 			return $hero_class;
 		}
