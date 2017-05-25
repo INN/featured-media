@@ -271,7 +271,7 @@ function largo_enqueue_featured_media_js( $hook ) {
 	if ( ! in_array( $hook, array( 'edit.php', 'edit-tags.php', 'post-new.php', 'post.php', 'term.php' ) ) ) {
 		return;
 	}
-	global $post, $wp_query;
+	global $post;
 
 	// Get us a URL
 	$instance = largo_featured_media();
@@ -327,7 +327,8 @@ function largo_enqueue_featured_media_js( $hook ) {
 	wp_localize_script( 'largo_featured_media', 'LFM', array(
 		'options' => largo_default_featured_media_types(),
 		'featured_image_display' => ! empty( $featured_image_display ),
-		'has_featured_media' => (bool) largo_has_featured_media( $post->ID )
+		'has_featured_media' => (bool) largo_has_featured_media( $post->ID ),
+		'largo_featured_media_ajax_nonce' => wp_create_nonce( 'largo_featured_media_ajax_nonce' ),
 	));
 }
 add_action( 'admin_enqueue_scripts', 'largo_enqueue_featured_media_js' );
