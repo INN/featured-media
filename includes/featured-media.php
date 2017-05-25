@@ -38,9 +38,14 @@ function largo_default_featured_media_types() {
  * @param String $classes Optional. Class string to apply to outer div.hero
  */
 function largo_hero( $post = null, $classes = '' ) {
-
+	/**
+	 * Not passed through wp_kses() because we do that later.
+	 * when the hero image/embed is actually output.
+	 * the output happens (and is escaped) in:
+	 *  partials/featured-embed.php
+	 *  partials/featured-image.php
+	 */
 	echo largo_get_hero( $post, $classes );
-
 }
 
 /**
