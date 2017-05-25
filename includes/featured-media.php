@@ -111,7 +111,6 @@ function largo_featured_image_hero( $post = null, $classes = '' ) {
 function largo_get_featured_hero( $post = null, $classes = '' ) {
 	$the_post = get_post( $post );
 	$featured_media = largo_get_featured_media( $the_post->ID );
-
 	$hero_class = largo_hero_class( $the_post->ID, false );
 	$classes = "hero $hero_class $classes";
 
@@ -223,7 +222,7 @@ function largo_get_featured_media( $post = null ) {
 		$ret = array(
 			'id' => $post->ID,
 			'attachment' => $post_thumbnail,
-			'type' => 'image'
+			'type' => 'image',
 		);
 	} else if ( ! empty( $ret ) && in_array( $ret['type'], array( 'embed', 'video' ) ) && ! empty( $post_thumbnail ) ) {
 		$attachment = wp_prepare_attachment_for_js( $post_thumbnail );
