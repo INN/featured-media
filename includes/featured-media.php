@@ -68,7 +68,7 @@ function largo_get_hero( $post = null, $classes = '' ) {
 	// If the box is checked to override the featured image display, obey it.
 	// EXCEPT if a youtube_url is added in the old way for the post. This is to respect
 	// behavior before v0.4,
-	if ( isset( $values['featured-image-display'][0] ) && ! isset( $values['youtube_url'] ) ) {
+	if ( isset( $values['featured-image-display'][0] ) ) {
 		return $ret;
 	}
 	if ( largo_has_featured_media( $post->ID ) && 'is-empty' !== $hero_class ) {
@@ -228,17 +228,6 @@ function largo_get_featured_media( $post = null ) {
 		$attachment = wp_prepare_attachment_for_js( $post_thumbnail );
 		unset( $attachment['compat'] );
 		$ret = array_merge( $ret, array( 'attachment_data' => $attachment ) );
-	}
-
-	// Backwards compatibility with posts that have a youtube_url set
-	$youtube_url = get_post_meta( $post->ID, 'youtube_url', true );
-	if ( empty( $ret ) && ! empty( $youtube_url ) ) {
-		$ret = array(
-			'id' => $post->ID,
-			'url' => $youtube_url,
-			'embed' => wp_oembed_get( $youtube_url ),
-			'type' => 'video'
-		);
 	}
 	return $ret;
 }
@@ -567,11 +556,6 @@ function largo_featured_media_save() {
 		delete_post_thumbnail( $data['id'] );
 	}
 
-	// Get rid of the old youtube_url while we're saving
-	$youtube_url = get_post_meta( $data['id'], 'youtube_url', true );
-	if ( ! empty( $youtube_url ) ) {
-		delete_post_meta( $data['id'], 'youtube_url' );
-	}
 	// Set the featured image for embed or oembed types
 	if ( isset( $data['thumbnail_url'] ) && isset( $data['thumbnail_type'] ) && $data['thumbnail_type'] == 'oembed' ) {
 		add_action( 'add_attachment', 'largo_media_sideload_filter' );
@@ -705,77 +689,3 @@ if ( ! function_exists( 'largo_hero_class' ) ) {
 		}
 	}
 }
-
-/**
- * Filter on partials/content.php to affect the presentation of partials/content.php
- *
- * Are you trying to modify this for a child theme? You may want to create a new partial for that use instead.
- *
- * @global $opt
- * @uses largo_post_in_series
- * @filter largo_content_partial_arguments
- * @param array $args The arguments for how partials/content.php displays
- * @param array|StdClass $queried_object the WordPress query that started the page load
- */
-function largo_content_partial_arguments_filter( $args, $queried_object ) {
-	$queried_object = (array) $queried_object;
-
-	// get display options for the loop
-	global $opt;
-
-	// If there is a series landing page, one of the two cases will be true:
-	// - the queried object will have the post_type of cftl-tax-landing
-	// - largo_load_more_posts_choose_partial will have set up the global $opt from $_POST['opt'], from largo_load_more_posts_data
-	if ( ( isset( $queried_object['post_type'] ) && $queried_object['post_type'] === 'cftl-tax-landing' ) || !empty( $opt ) ) {
-		/**
-		 *  $opt looks like this:
-		 *  array (
-		 *   '_edit_lock' => '1473688772:1561628',
-		 *   '_edit_last' => '1561628',
-		 *   'wide_assets' => '',
-		 *   '_wp_page_template' => 'series-landing.php',
-		 *   'header_enabled' => '1',
-		 *   'show_series_byline' => '',
-		 *   'show_sharebar' => '1',
-		 *   'header_style' => 'standard',
-		 *   'cftl_layout' => 'two-column',
-		 *   'left_region' => 'sidebar-main',
-		 *   'right_region' => 'sidebar-main',
-		 *   'per_page' => '10',
-		 *   'post_order' => 'DESC',
-		 *   'show' =>
-		 *   array (
-		 *     'image' => false,
-		 *     'excerpt' => false,
-		 *     'byline' => false
-		 *   ),
-		 *   'footer_style' => '',
-		 *   'footerhtml' => '',
-		 * )
-		 */
-		// The queried object for series pages is the series landing page's post
-		$args['in_series'] = TRUE;
-
-		// If $opt is loaded from $_POST['opt'] because we're doing an LMP query, PHP's boolean False was encoded as json's string 'false'
-		// These conditionals account for either possibility
-		if ( isset( $opt['show']['image'] ) && ( $opt['show']['image'] == false || strtolower( $opt['show']['image'] ) === 'false' ) ) {
-			$args['show_thumbnail'] = FALSE;
-		}
-		if ( isset( $opt['show']['byline'] ) && ( $opt['show']['byline'] == false || strtolower( $opt['show']['byline'] ) === 'false' ) ) {
-			$args['show_byline'] = FALSE;
-		}
-		if ( isset( $opt['show']['excerpt'] ) && ( $opt['show']['excerpt'] == false || strtolower( $opt['show']['excerpt'] ) === 'false' ) ) {
-			$args['show_excerpt'] = FALSE;
-		}
-	}
-	// If the main query is for a series term
-	// need to check the queried object vars to see if there's a series term in the terms
-
-	// If the displayed post is in a series at all, not just the series landing page
-	if ( largo_post_in_series( $args['post_id'] ) ) {
-		$args['featured'] = has_term( 'series-featured', 'prominence' );
-	}
-
-	return $args;
-}
-add_action( 'largo_content_partial_arguments', 'largo_content_partial_arguments_filter', 10, 2 );
