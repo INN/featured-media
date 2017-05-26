@@ -38,9 +38,15 @@ function largo_default_featured_media_types() {
  * @param String $classes Optional. Class string to apply to outer div.hero
  */
 function largo_hero( $post = null, $classes = '' ) {
-
+	/**
+	 * Not passed through wp_kses() because we do that later.
+	 * when the hero image/embed is actually output.
+	 * the output happens (and is escaped) in:
+	 *  partials/hero-featured-embed.php
+	 *  partials/hero-featured-image.php
+	 *  etc.
+	 */
 	echo largo_get_hero( $post, $classes );
-
 }
 
 /**
@@ -62,11 +68,10 @@ function largo_get_hero( $post = null, $classes = '' ) {
 	// If the box is checked to override the featured image display, obey it.
 	// EXCEPT if a youtube_url is added in the old way for the post. This is to respect
 	// behavior before v0.4,
-	if ( isset( $values['featured-image-display'][0] ) && ! isset( $values['youtube_url'] ) ) {
+	if ( isset( $values['featured-image-display'][0] ) ) {
 		return $ret;
 	}
-	if ( largo_has_featured_media( $post->ID ) && $hero_class !== 'is-empty' ) {
-
+	if ( largo_has_featured_media( $post->ID ) && 'is-empty' !== $hero_class ) {
 		$ret = largo_get_featured_hero( $post->ID, $classes );
 	}
 
@@ -106,7 +111,6 @@ function largo_featured_image_hero( $post = null, $classes = '' ) {
 function largo_get_featured_hero( $post = null, $classes = '' ) {
 	$the_post = get_post( $post );
 	$featured_media = largo_get_featured_media( $the_post->ID );
-
 	$hero_class = largo_hero_class( $the_post->ID, false );
 	$classes = "hero $hero_class $classes";
 
@@ -218,22 +222,12 @@ function largo_get_featured_media( $post = null ) {
 		$ret = array(
 			'id' => $post->ID,
 			'attachment' => $post_thumbnail,
-			'type' => 'image'
+			'type' => 'image',
 		);
 	} else if ( ! empty( $ret ) && in_array( $ret['type'], array( 'embed', 'video' ) ) && ! empty( $post_thumbnail ) ) {
 		$attachment = wp_prepare_attachment_for_js( $post_thumbnail );
+		unset( $attachment['compat'] );
 		$ret = array_merge( $ret, array( 'attachment_data' => $attachment ) );
-	}
-
-	// Backwards compatibility with posts that have a youtube_url set
-	$youtube_url = get_post_meta( $post->ID, 'youtube_url', true );
-	if ( empty( $ret ) && ! empty( $youtube_url ) ) {
-		$ret = array(
-			'id' => $post->ID,
-			'url' => $youtube_url,
-			'embed' => wp_oembed_get( $youtube_url ),
-			'type' => 'video'
-		);
 	}
 	return $ret;
 }
@@ -266,7 +260,7 @@ function largo_enqueue_featured_media_js( $hook ) {
 	if ( ! in_array( $hook, array( 'edit.php', 'edit-tags.php', 'post-new.php', 'post.php', 'term.php' ) ) ) {
 		return;
 	}
-	global $post, $wp_query;
+	global $post;
 
 	// Get us a URL
 	$instance = largo_featured_media();
@@ -322,7 +316,8 @@ function largo_enqueue_featured_media_js( $hook ) {
 	wp_localize_script( 'largo_featured_media', 'LFM', array(
 		'options' => largo_default_featured_media_types(),
 		'featured_image_display' => ! empty( $featured_image_display ),
-		'has_featured_media' => (bool) largo_has_featured_media( $post->ID )
+		'has_featured_media' => (bool) largo_has_featured_media( $post->ID ),
+		'largo_featured_media_ajax_nonce' => wp_create_nonce( 'largo_featured_media_ajax_nonce' ),
 	));
 }
 add_action( 'admin_enqueue_scripts', 'largo_enqueue_featured_media_js' );
@@ -337,32 +332,32 @@ function largo_featured_media_templates() { ?>
 
 			<# var model = data.controller.model #>
 			<div>
-				<label for="title"><span><?php echo __( 'Title', 'largo' ); ?></span></label>
+				<label for="title"><span><?php esc_html_e( 'Title', 'largo' ); ?></span></label>
 				<input type="text" name="title" <# if (model.get('type') == 'embed-code') { #>value="{{ model.get('title') }}"<# } #> />
 			</div>
 
 			<div>
-				<label for="caption"><span><?php echo __( 'Caption', 'largo' ); ?></span></label>
+				<label for="caption"><span><?php esc_html_e( 'Caption', 'largo' ); ?></span></label>
 				<input type="text" name="caption" <# if (model.get('type') == 'embed-code') { #>value="{{ model.get('caption') }}"<# } #> />
 			</div>
 
 			<div>
-				<label for="credit"><span><?php echo __( 'Credit', 'largo' ); ?></span></label>
+				<label for="credit"><span><?php esc_html_e( 'Credit', 'largo' ); ?></span></label>
 				<input type="text" name="credit" <# if (model.get('type') == 'embed-code') { #>value="{{ model.get('credit') }}"<# } #> />
 			</div>
 
 			<div>
-				<label for="url"><span><?php echo __( 'URL', 'largo' ); ?></span></label>
+				<label for="url"><span><?php esc_html_e( 'URL', 'largo' ); ?></span></label>
 				<input type="text" name="url" <# if (model.get('type') == 'embed-code') { #>value="{{ model.get('url') }}"<# } #> />
 			</div>
 
 			<div>
-				<label for="embed"><span><?php echo __( 'Embed code', 'largo' ); ?></span></label>
+				<label for="embed"><span><?php esc_html_e( 'Embed code', 'largo' ); ?></span></label>
 				<textarea name="embed"><# if (model.get('type') == 'embed-code') { #>{{ model.get('embed') }}<# } #></textarea>
 			</div>
 
 			<div>
-				<label><span><?php echo __( 'Embed thumbnail', 'largo' ); ?></span></span></label>
+				<label><span><?php esc_html_e( 'Embed thumbnail', 'largo' ); ?></span></span></label>
 				<div id="embed-thumb"></div>
 			</div>
 		</form>
@@ -372,36 +367,36 @@ function largo_featured_media_templates() { ?>
 		<form id="featured-video-form">
 			<input type="hidden" name="type" value="video" />
 
-			<p><?php echo __( 'Enter a video URL to get started', 'largo' ); ?>.</p>
+			<p><?php esc_html_e( 'Enter a video URL to get started', 'largo' ); ?>.</p>
 			<# var model = data.controller.model #>
 			<div>
-				<label for="url"><span><?php echo __( 'Video URL', 'largo' ); ?>  <span class="spinner" style="display: none;"></span></label>
+				<label for="url"><span><?php esc_html_e( 'Video URL', 'largo' ); ?>  <span class="spinner" style="display: none;"></span></label>
 				<input type="text" class="url" name="url" <# if (model.get('type') == 'video') { #>value="{{ model.get('url') }}"<# } #>/>
 				<p class="error"></p>
 			</div>
 
 			<div>
-			<label for="embed"><span><?php echo __( 'Video embed code', 'largo' ); ?></span></label>
+			<label for="embed"><span><?php esc_html_e( 'Video embed code', 'largo' ); ?></span></label>
 				<textarea name="embed"><# if (model.get('type') == 'video') { #>{{ model.get('embed') }}<# } #></textarea>
 			</div>
 
 			<div>
-				<label><span><?php echo __( 'Video thumbnail', 'largo' ); ?></span></span></label>
+				<label><span><?php esc_html_e( 'Video thumbnail', 'largo' ); ?></span></span></label>
 				<div id="embed-thumb"></div>
 			</div>
 
 			<div>
-				<label for="title"><span><?php echo __( 'Title', 'largo' ); ?></span></span></label>
+				<label for="title"><span><?php esc_html_e( 'Title', 'largo' ); ?></span></span></label>
 				<input type="text" name="title" <# if (model.get('type') == 'video') { #>value="{{ model.get('title') }}"<# } #> />
 			</div>
 
 			<div>
-				<label for="caption"><span><?php echo __( 'Caption', 'largo' ); ?></span></label>
+				<label for="caption"><span><?php esc_html_e( 'Caption', 'largo' ); ?></span></label>
 				<input type="text" name="caption" <# if (model.get('type') == 'video') { #>value="{{ model.get('caption') }}"<# } #> />
 			</div>
 
 			<div>
-				<label for="credit"><span><?php echo __( 'Credit', 'largo' ); ?></span></label>
+				<label for="credit"><span><?php esc_html_e( 'Credit', 'largo' ); ?></span></label>
 				<input type="text" name="credit" <# if (model.get('type') == 'video') { #>value="{{ model.get('credit') }}"<# } #> />
 			</div>
 
@@ -418,12 +413,12 @@ function largo_featured_media_templates() { ?>
 				<input type="hidden" name="thumbnail_url" value="{{ data.model.get('thumbnail_url') }}" />
 				<input type="hidden" name="thumbnail_type" value="oembed" />
 			<# } #>
-			<a href="#" class="remove-thumb"><?php echo __( 'Remove thumbnail', 'largo' ); ?></a>
+			<a href="#" class="remove-thumb"><?php esc_html_e( 'Remove thumbnail', 'largo' ); ?></a>
 		</div>
 	</script>
 
 	<script type="text/template" id="tmpl-featured-remove-featured">
-		<h1><?php echo __( 'Are you sure you want to remove featured media from this post?', 'largo' ); ?></h1>
+		<h1><?php esc_html_e( 'Are you sure you want to remove featured media from this post?', 'largo' ); ?></h1>
 	</script>
 <?php }
 add_action( 'admin_print_footer_scripts', 'largo_featured_media_templates', 1 );
@@ -460,18 +455,17 @@ add_action( 'add_meta_boxes', 'largo_add_featured_image_meta_box' );
  * @param array   $metabox With metabox id, title, callback, and args elements.
  */
 function largo_featured_image_metabox_callback( $post, $metabox ) {
-	global $post;
 
 	$has_featured_media = largo_has_featured_media( $post->ID );
-	$language = ( ! empty( $has_featured_media ) ) ? 'Edit' : 'Set';
+	$language = ( ! empty( $has_featured_media ) ) ?
+	 	__( 'Edit Featured Media', 'largo' ) :
+		__( 'Set Featured Media', 'largo' );
 
-	$checked = 'false' == get_post_meta( $post->ID, 'featured-image-display', true ) ? 'checked="checked"' : "";
+	$checked = 'false' === get_post_meta( $post->ID, 'featured-image-display', true ) ? 'checked="checked"' : "";
 	echo wp_nonce_field( basename( __FILE__ ), 'featured_image_display_nonce' );
-
 	echo '<a href="#" class="set-featured-media">' . get_the_post_thumbnail() . '</a>';
-	echo '<a href="#" id="set-featured-media-button" class="button set-featured-media add_media" data-editor="content" title="' . __( $language . ' Featured Media', 'largo' ) . '"></span> ' . __( $language . ' Featured Media', 'largo' ) . '</a> <span class="spinner" style="display: none;"></span>';
-
-	echo '<p><label class="selectit"><input type="checkbox" value="true" name="featured-image-display"' . $checked .'> ' . __( 'Hide on Single Post display', 'largo' ) . '</label></p>';
+	echo '<a href="#" id="set-featured-media-button" class="button set-featured-media add_media" data-editor="content" title="' . esc_html( $language ) . '"></span> ' . esc_html( $language ) . '</a> <span class="spinner" style="display: none;"></span>';
+	echo '<p><label class="selectit"><input type="checkbox" value="true" name="featured-image-display"' . esc_attr( $checked ) . '> ' . esc_html__( 'Hide image at top of story.', 'largo' ) . '</label></p>';
 }
 
 /**
@@ -488,8 +482,8 @@ function largo_save_featured_media_data( $post_id, $post ) {
 	$post_type = get_post_type_object( $post->post_type );
 
 	// Check if the current user has permission to edit the post
-	if ( !current_user_can( $post_type->cap->edit_post, $post_id ) ) {
-		return $post_id;
+	if ( ! current_user_can( 'edit_post', $post_id ) ) {
+		return;
 	}
 
 	// Get the posted data and sanitize it for use as an HTML class
@@ -505,7 +499,7 @@ function largo_save_featured_media_data( $post_id, $post ) {
 	 * If the checkbox was checked, update the meta_value, but save it as 'false' for compatibility with older Largo versions (<.5.5)
 	 * If the checkbox was unchecked, delete the meta_value
 	 */
-	 if ( $new_meta_value && 'true' == $new_meta_value && '' == $meta_value ) {
+	 if ( $new_meta_value && 'true' === $new_meta_value && '' === $meta_value ) {
 		 add_post_meta( $post_id, $meta_key, 'false', true );
 	} elseif ( empty( $new_meta_value ) ) {
 		delete_post_meta( $post_id, $meta_key );
@@ -522,20 +516,18 @@ add_action( 'save_post', 'largo_save_featured_media_data', 10, 2 );
  * with an `id` key corresponding to post ID to look up.
  */
 function largo_featured_media_read() {
-	if ( !empty( $_POST['data'] ) ) {
+	if ( ! empty( $_POST['data'] ) ) {
 		$data = json_decode( stripslashes( $_POST['data'] ), true );
 		$ret = largo_get_featured_media( $data['id'] );
 
 		// Otherwise, check for `featured_media` post meta
 		if ( !empty( $ret ) ) {
-			print json_encode( $ret );
-			wp_die();
+			wp_send_json( $ret );
 		}
 
 		// No featured thumbnail and not `featured_media`, so just return
 		// an array with the post ID
-		print json_encode( array( 'id' => $data['id'] ) );
-		wp_die();
+		wp_send_json( array( 'id' => $data['id'] ) );
 	}
 }
 add_action( 'wp_ajax_largo_featured_media_read', 'largo_featured_media_read' );
@@ -545,63 +537,78 @@ add_action( 'wp_ajax_largo_featured_media_read', 'largo_featured_media_read' );
  * an `id` key corresponding to the post ID that needs meta saved.
  */
 function largo_featured_media_save() {
-	if ( !empty( $_POST['data'] ) ) {
-		$data = json_decode( stripslashes( $_POST['data'] ), true );
 
-		// If an attachment ID is present, update the post thumbnail/featured image
-		if ( !empty( $data['attachment'] ) ) {
-			set_post_thumbnail( $data['id'], $data['attachment'] );
-		} else {
-			delete_post_thumbnail( $data['id'] );
-		}
-		// Get rid of the old youtube_url while we're saving
-		$youtube_url = get_post_meta( $data['id'], 'youtube_url', true );
-		if ( !empty( $youtube_url ) ) {
-			delete_post_meta($data['id'], 'youtube_url');
-		}
-		// Set the featured image for embed or oembed types
-		if ( isset( $data['thumbnail_url'] ) && isset( $data['thumbnail_type'] ) && $data['thumbnail_type'] == 'oembed' ) {
-			$thumbnail_id = largo_media_sideload_image( $data['thumbnail_url'], null );
-		} else if ( isset( $data['attachment'] ) ) {
-			$thumbnail_id = $data['attachment'];
-		}
+	check_ajax_referer( 'largo_featured_media_ajax_nonce', 'security' );
 
-		// If featured media is a gallery, use the first image as the representative thumbnail
-		if ( $data['type'] == 'gallery' ) {
-			$thumbnail_id = $data['gallery'][0];
-		}
-
-		if ( isset( $thumbnail_id ) ) {
-			update_post_meta( $data['id'], '_thumbnail_id', $thumbnail_id );
-			$data['attachment_data'] = wp_prepare_attachment_for_js( $thumbnail_id );
-		}
-
-		// Don't save the post ID in post meta
-		$save = $data;
-		unset( $save['id'] );
-
-		// Save what's sent over the wire as `featured_media` post meta
-		$ret = update_post_meta( $data['id'], 'featured_media', $save );
-
-		print json_encode( $data );
-		wp_die();
+	if ( empty( $_POST['data'] ) ) {
+		return;
 	}
+
+	$data = json_decode( wp_unslash( $_POST['data'] ), true );
+	if ( ! current_user_can( 'edit_post', $data['id'] ) ) {
+		return;
+	}
+
+	// If an attachment ID is present, update the post thumbnail/featured image
+	if ( !empty( $data['attachment'] ) ) {
+		set_post_thumbnail( $data['id'], $data['attachment'] );
+	} else {
+		delete_post_thumbnail( $data['id'] );
+	}
+
+	// Set the featured image for embed or oembed types
+	if ( isset( $data['thumbnail_url'] ) && isset( $data['thumbnail_type'] ) && $data['thumbnail_type'] == 'oembed' ) {
+		add_action( 'add_attachment', 'largo_media_sideload_filter' );
+		media_sideload_image( $data['thumbnail_url'], $data['id'], null );
+		remove_action( 'add_attachment', 'largo_media_sideload_filter' );
+	} else if ( isset( $data['attachment'] ) ) {
+		if ( $data['type'] == 'gallery' ) {
+			$thumbnail_id = isset( $data['gallery'][0] ) ? $data['gallery'][0] : false;
+		} else {
+			$thumbnail_id = isset( $data['attachment'] ) ? $data['attachment'] : false;
+		}
+		largo_save_featured_media( $thumbnail_id );
+	}
+
+	wp_send_json( $data );
 }
 add_action( 'wp_ajax_largo_featured_media_save', 'largo_featured_media_save' );
+
+function largo_media_sideload_filter( $thumbnail_id ) {
+	largo_save_featured_media( $thumbnail_id );
+}
+
+function largo_save_featured_media( $thumbnail_id ) {
+	$data = json_decode( stripslashes( $_POST['data'] ), true );
+
+	if ( $thumbnail_id ) {
+		update_post_meta( $data['id'], '_thumbnail_id', $thumbnail_id );
+		$data['attachment_data'] = wp_prepare_attachment_for_js( $thumbnail_id );
+		unset( $data['attachment_data']['compat'] );
+	}
+
+	// Don't save the post ID in post meta.
+	$save = $data;
+	unset( $save['id'] );
+
+	// Save what's sent over the wire as `featured_media` post meta.
+	update_post_meta( $data['id'], 'featured_media', $save );
+
+}
 
 /**
  * Saves the option that determines whether a featured image should be displayed
  * at the top of the post page or not.
  */
 function largo_save_featured_image_display() {
-	if ( !empty( $_POST['data'] ) ) {
+	if ( ! empty( $_POST['data'] ) ) {
 		$data = json_decode( stripslashes( $_POST['data'] ), true );
 
 		$post_ID = (int) $data['id'];
 		$post_type = get_post_type( $post_ID );
 		$post_status = get_post_status( $post_ID );
 
-		if ( $post_type && isset( $data['featured-image-display'] ) && $data['featured-image-display'] == 'on') {
+		if ( $post_type && isset( $data['featured-image-display'] ) && $data['featured-image-display'] === 'on') {
 			update_post_meta( $post_ID, 'featured-image-display', 'false' );
 		} else {
 			delete_post_meta( $post_ID, 'featured-image-display' );
@@ -623,12 +630,12 @@ function largo_fetch_video_oembed() {
 		require_once( ABSPATH . WPINC . '/class-oembed.php' );
 		$oembed = _wp_oembed_get_object();
 		$url = $data['url'];
-		$provider = $oembed->get_provider($url);
-		$data = $oembed->fetch($provider, $url);
-		$embed = $oembed->data2html($data, $url);
+		$provider = $oembed->get_provider( $url );
+		$data = $oembed->fetch( $provider, $url );
+		$embed = $oembed->data2html( $data, $url );
 		$ret = array_merge( array( 'embed' => $embed ), (array) $data );
 		print json_encode( $ret );
-		wp_die();
+		wp_send_json( $ret );
 	}
 }
 add_action( 'wp_ajax_largo_fetch_video_oembed', 'largo_fetch_video_oembed' );
@@ -642,7 +649,7 @@ function largo_featured_media_post_classes( $classes ) {
 	global $post;
 
 	$featured = largo_get_featured_media( $post->ID );
-	if ( !empty( $featured ) ) {
+	if ( ! empty( $featured ) ) {
 		$classes = array_merge( $classes, array(
 			'featured-media',
 			'featured-media-' . $featured['type']
@@ -676,83 +683,9 @@ if ( ! function_exists( 'largo_hero_class' ) ) {
 		}
 
 		if ( $echo ) {
-			echo $hero_class;
+			echo esc_attr( $hero_class );
 		} else {
 			return $hero_class;
 		}
 	}
 }
-
-/**
- * Filter on partials/content.php to affect the presentation of partials/content.php
- *
- * Are you trying to modify this for a child theme? You may want to create a new partial for that use instead.
- *
- * @global $opt
- * @uses largo_post_in_series
- * @filter largo_content_partial_arguments
- * @param array $args The arguments for how partials/content.php displays
- * @param array|StdClass $queried_object the WordPress query that started the page load
- */
-function largo_content_partial_arguments_filter( $args, $queried_object ) {
-	$queried_object = (array) $queried_object;
-
-	// get display options for the loop
-	global $opt;
-
-	// If there is a series landing page, one of the two cases will be true:
-	// - the queried object will have the post_type of cftl-tax-landing
-	// - largo_load_more_posts_choose_partial will have set up the global $opt from $_POST['opt'], from largo_load_more_posts_data
-	if ( ( isset( $queried_object['post_type'] ) && $queried_object['post_type'] === 'cftl-tax-landing' ) || !empty( $opt ) ) {
-		/**
-		 *  $opt looks like this:
-		 *  array (
-		 *   '_edit_lock' => '1473688772:1561628',
-		 *   '_edit_last' => '1561628',
-		 *   'wide_assets' => '',
-		 *   '_wp_page_template' => 'series-landing.php',
-		 *   'header_enabled' => '1',
-		 *   'show_series_byline' => '',
-		 *   'show_sharebar' => '1',
-		 *   'header_style' => 'standard',
-		 *   'cftl_layout' => 'two-column',
-		 *   'left_region' => 'sidebar-main',
-		 *   'right_region' => 'sidebar-main',
-		 *   'per_page' => '10',
-		 *   'post_order' => 'DESC',
-		 *   'show' =>
-		 *   array (
-		 *     'image' => false,
-		 *     'excerpt' => false,
-		 *     'byline' => false
-		 *   ),
-		 *   'footer_style' => '',
-		 *   'footerhtml' => '',
-		 * )
-		 */
-		// The queried object for series pages is the series landing page's post
-		$args['in_series'] = TRUE;
-
-		// If $opt is loaded from $_POST['opt'] because we're doing an LMP query, PHP's boolean False was encoded as json's string 'false'
-		// These conditionals account for either possibility
-		if ( isset( $opt['show']['image'] ) && ( $opt['show']['image'] == false || strtolower( $opt['show']['image'] ) === 'false' ) ) {
-			$args['show_thumbnail'] = FALSE;
-		}
-		if ( isset( $opt['show']['byline'] ) && ( $opt['show']['byline'] == false || strtolower( $opt['show']['byline'] ) === 'false' ) ) {
-			$args['show_byline'] = FALSE;
-		}
-		if ( isset( $opt['show']['excerpt'] ) && ( $opt['show']['excerpt'] == false || strtolower( $opt['show']['excerpt'] ) === 'false' ) ) {
-			$args['show_excerpt'] = FALSE;
-		}
-	}
-	// If the main query is for a series term
-	// need to check the queried object vars to see if there's a series term in the terms
-
-	// If the displayed post is in a series at all, not just the series landing page
-	if ( largo_post_in_series( $args['post_id'] ) ) {
-		$args['featured'] = has_term( 'series-featured', 'prominence' );
-	}
-
-	return $args;
-}
-add_action( 'largo_content_partial_arguments', 'largo_content_partial_arguments_filter', 10, 2 );
